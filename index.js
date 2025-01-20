@@ -5,7 +5,7 @@ const axios = require('axios');
 const app = express();
 app.use(bodyParser.json());
 
-const GITHUB_TOKEN = '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';
+const GITHUB_TOKEN = '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';
 const REPO_OWNER = 'CoodeCrafters';
 const REPO_NAME = 'AsepProject';
 const FILE_PATH = './resources1.json'; // Path in the repository
