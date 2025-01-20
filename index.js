@@ -11,7 +11,7 @@ app.use(bodyParser.json());
 const GITHUB_TOKEN = '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';
 const REPO_OWNER = 'CoodeCrafters';
 const REPO_NAME = 'AsepProject';
-const FILE_PATH = './resources1.json'; // Path in the repository
+const FILE_PATH = 'testing/resources1.json'; // Path in the repository
 
 // Fetch the current JSON file from GitHub
 async function fetchJSONFile() {
