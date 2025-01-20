@@ -8,7 +8,7 @@ app.use(cors()); // Enable CORS for all routes
 app.use(bodyParser.json());
 
 
-const GITHUB_TOKEN = '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';
+const GITHUB_TOKEN = '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';
 const REPO_OWNER = 'CoodeCrafters';
 const REPO_NAME = 'AsepProject';
 const FILE_PATH = 'testing/resources1.json'; // Path in the repository
@@ -53,13 +53,20 @@ async function updateJSONFile(content, sha) {
 app.get('/get-domains', async (req, res) => {
   try {
     const { json } = await fetchJSONFile();
-    const domains = json.map(entry => entry.domain);
-    res.json(domains);
+    
+    // Ensure that json is an array before proceeding
+    if (Array.isArray(json)) {
+      const domains = json.map(entry => entry.domain);
+      res.json(domains);
+    } else {
+      res.status(500).json({ message: 'Invalid JSON format' });
+    }
   } catch (error) {
     console.error('Error fetching domains:', error);
     res.status(500).json({ message: 'Error fetching domains' });
   }
 });
+
 
 // Endpoint to insert a book
 app.post('/insert-book', async (req, res) => {
