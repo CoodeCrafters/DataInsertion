@@ -89,15 +89,8 @@ app.post('/insert-book', async (req, res) => {
     // Remove pdfLink from the book object before saving it to the JSON
     const { pdfLink, ...bookWithoutPdf } = book;
 
-    // Add the book to the domain
-    let domainEntry = json.find(entry => entry.domain === domain);
-    if (!domainEntry) {
-      domainEntry = { domain, books: [] };
-      json.push(domainEntry);
-    }
-    domainEntry.books.push(bookWithoutPdf); // Save the book without the pdfLink in the JSON
-
     // Send PDF Link to external library service (to be saved there)
+    let pdfLinkSavedSuccessfully = false;
     try {
       const response = await axios.post('https://central-library.onrender.com/saveLibraryView', {
         isbn: book.ISBN,
@@ -106,6 +99,7 @@ app.post('/insert-book', async (req, res) => {
 
       if (response.status === 200) {
         console.log('PDF link saved successfully');
+        pdfLinkSavedSuccessfully = true;
       } else {
         console.error('Failed to save PDF link');
       }
@@ -113,14 +107,29 @@ app.post('/insert-book', async (req, res) => {
       console.error('Error saving PDF link:', error);
     }
 
+    // If the PDF link was not saved successfully, don't save the book to the GitHub JSON
+    if (!pdfLinkSavedSuccessfully) {
+      return res.status(500).json({ message: 'Failed to save PDF link. Book not added.' });
+    }
+
+    // Add the book to the domain only if PDF link was saved successfully
+    let domainEntry = json.find(entry => entry.domain === domain);
+    if (!domainEntry) {
+      domainEntry = { domain, books: [] };
+      json.push(domainEntry);
+    }
+    domainEntry.books.push(bookWithoutPdf); // Save the book without the pdfLink in the JSON
+
     // Update the JSON file on GitHub
     await updateJSONFile(json, sha);
+
     res.json({ message: 'Book added successfully.' });
   } catch (error) {
     console.error('Error inserting book:', error);
     res.status(500).json({ message: 'Error inserting book' });
   }
 });
+
 
 
 // Endpoint to search authors
