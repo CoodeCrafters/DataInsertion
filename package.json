@@ -1,9 +1,12 @@
 {
+    "name": "DataInsertion",
+    "version": "1.0.0",
   "dependencies": {
     "axios": "^1.7.9",
     "body-parser": "^1.20.3",
     "data": "^1.0.0",
     "express": "^4.21.2",
-    "insertion": "^0.2.3"
+    "insertion": "^0.2.3",
+    "module_name": "^1.0.0"
   }
 }
