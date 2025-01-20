@@ -138,6 +138,7 @@
     <script>
         const BASE_URL = "https://datainsertion.onrender.com";
 
+       
         // Fetch existing domains for the dropdown
         async function fetchDomains() {
             try {
@@ -194,7 +195,6 @@
             const bookCover = document.getElementById('bookCover').value.trim();
             const pdfLink = document.getElementById('pdfLink').value.trim(); // Fetch PDF link value
 
-
             const selectedDomain = domain === 'Others' ? otherDomain : domain;
 
             if (!selectedDomain || !bookName || !author || !isbn || !year || !bookCover) {
@@ -213,6 +213,7 @@
                     pdfLink: pdfLink  // Include PDF link here
     }
 };
+                
 
             try {
                 const response = await fetch(`${BASE_URL}/insert-book`, {
@@ -282,6 +283,16 @@
             document.getElementById('year').value = '';
             document.getElementById('bookCover').value = '';
             document.getElementById('otherDomain').value = '';
+            function clearFields() {
+    document.getElementById('bookName').value = '';
+    document.getElementById('author').value = '';
+    document.getElementById('isbn').value = '';
+    document.getElementById('year').value = '';
+    document.getElementById('bookCover').value = '';
+    document.getElementById('otherDomain').value = '';
+    document.getElementById('pdfLink').value = ''; // Clear the PDF link field
+}
+
         }
 
     </script>
@@ -314,11 +325,12 @@
         <label for="bookCover">Book Cover URL:</label><br>
         <input type="url" id="bookCover" required><br><br>
 
-       <!-- New PDF Link Input Box -->
-       <label for="pdfLink">PDF Link:</label><br>
-       <input type="url" id="pdfLink" required><br><br>
-       <button type="submit">Insert Book</button>
-   </form>
+        <!-- New PDF Link Input Box -->
+        <label for="pdfLink">PDF Link:</label><br>
+        <input type="url" id="pdfLink" required><br><br>
+        <button type="submit">Insert Book</button>
+    </form>
 </body>
 
 </html>
+
