@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Update JSON on GitHub</title>
+  <style>
+    /* Style the suggestion dropdown */
+    #authorSuggestions {
+      border: 1px solid #ccc;
+      max-height: 100px;
+      overflow-y: auto;
+      background-color: white;
+      position: absolute;
+      z-index: 1;
+      display: none;
+    }
+    #authorSuggestions div {
+      padding: 5px;
+      cursor: pointer;
+    }
+    #authorSuggestions div:hover {
+      background-color: #f0f0f0;
+    }
+  </style>
+  <script>
+    // Fetch existing domains for the dropdown
+    async function fetchDomains() {
+      try {
+        const response = await fetch('/get-domains');
+        const domains = await response.json();
+
+        const dropdown = document.getElementById('domainDropdown');
+        dropdown.innerHTML = '';
+
+        domains.forEach(domain => {
+          const option = document.createElement('option');
+          option.value = domain;
+          option.textContent = domain;
+          dropdown.appendChild(option);
+        });
+
+        // Add "Others" option
+        const othersOption = document.createElement('option');
+        othersOption.value = 'Others';
+        othersOption.textContent = 'Others';
+        dropdown.appendChild(othersOption);
+      } catch (error) {
+        console.error('Error fetching domains:', error);
+      }
+    }
+
+    // Show/Hide textarea for "Others"
+    function toggleOtherDomain() {
+      const dropdown = document.getElementById('domainDropdown');
+      const otherDomainField = document.getElementById('otherDomainField');
+
+      if (dropdown.value === 'Others') {
+        otherDomainField.style.display = 'block';
+      } else {
+        otherDomainField.style.display = 'none';
+      }
+    }
+
+    // Handle form submission
+    async function insertBook() {
+      const domain = document.getElementById('domainDropdown').value;
+      const otherDomain = document.getElementById('otherDomain').value.trim();
+      const bookName = document.getElementById('bookName').value.trim();
+      const author = document.getElementById('author').value.trim();
+      const isbn = document.getElementById('isbn').value.trim();
+      const year = document.getElementById('year').value.trim();
+      const bookCover = document.getElementById('bookCover').value.trim();
+
+      const selectedDomain = domain === 'Others' ? otherDomain : domain;
+
+      if (!selectedDomain || !bookName || !author || !isbn || !year || !bookCover) {
+        alert('Please fill in all fields.');
+        return;
+      }
+
+      const payload = {
+        domain: selectedDomain,
+        book: {
+          BookName: bookName,
+          Author: author,
+          ISBN: isbn,
+          year: parseInt(year, 10),
+          bookCover: bookCover
+        }
+      };
+
+      try {
+        const response = await fetch('/insert-book', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        if (response.ok) {
+          alert('Book inserted successfully.');
+          await fetchDomains(); // Refresh the dropdown
+        } else {
+          alert(`Error: ${result.message}`);
+        }
+      } catch (error) {
+        console.error('Error inserting book:', error);
+        alert('An error occurred.');
+      }
+    }
+ // Fetch author suggestions as the user types
+ async function fetchAuthorSuggestions() {
+      const authorInput = document.getElementById('author');
+      const suggestionsContainer = document.getElementById('authorSuggestions');
+      const query = authorInput.value.trim();
+
+      if (!query) {
+        suggestionsContainer.style.display = 'none';
+        return;
+      }
+
+      try {
+        const response = await fetch(`/search-authors?query=${encodeURIComponent(query)}`);
+        const suggestions = await response.json();
+
+        if (response.ok && suggestions.length > 0) {
+          suggestionsContainer.innerHTML = '';
+          suggestions.forEach(suggestion => {
+            const div = document.createElement('div');
+            div.textContent = suggestion;
+            div.onclick = () => {
+              authorInput.value = suggestion;
+              suggestionsContainer.style.display = 'none';
+            };
+            suggestionsContainer.appendChild(div);
+          });
+          suggestionsContainer.style.display = 'block';
+        } else {
+          suggestionsContainer.style.display = 'none';
+        }
+      } catch (error) {
+        console.error('Error fetching author suggestions:', error);
+        suggestionsContainer.style.display = 'none';
+      }
+    }
+    // Initialize dropdown on page load
+    document.addEventListener('DOMContentLoaded', fetchDomains);
+  </script>
+</head>
+<body>
+    <h1>Insert Book into JSON</h1>
+    <form onsubmit="event.preventDefault(); insertBook();">
+    <label for="domainDropdown">Select Domain:</label><br>
+    <select id="domainDropdown" onchange="toggleOtherDomain()" required></select><br><br>
+
+    <div id="otherDomainField" style="display: none;">
+      <label for="otherDomain">Enter New Domain:</label><br>
+      <input type="text" id="otherDomain"><br><br>
+    </div>
+
+    <label for="bookName">Book Name:</label><br>
+    <input type="text" id="bookName" required><br><br>
+
+    <label for="author">Author:</label><br>
+    <input type="text" id="author" oninput="fetchAuthorSuggestions()" required>
+    <div id="authorSuggestions"></div><br><br>
+    
+    <label for="isbn">ISBN:</label><br>
+    <input type="text" id="isbn" required><br><br>
+
+    <label for="year">Year:</label><br>
+    <input type="number" id="year" required><br><br>
+
+    <label for="bookCover">Book Cover URL:</label><br>
+    <input type="url" id="bookCover" required><br><br>
+
+    <button type="submit">Insert Book</button>
+  </form>
+</body>
+
+</html>
