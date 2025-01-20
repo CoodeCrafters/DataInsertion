@@ -13,6 +13,7 @@ const REPO_OWNER = 'CoodeCrafters';
 const REPO_NAME = 'AsepProject';
 const FILE_PATH = 'testing/resources1.json'; // Path in the repository
 
+
 // Fetch the current JSON file from GitHub
 async function fetchJSONFile() {
   const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`;
@@ -32,7 +33,6 @@ async function fetchJSONFile() {
     throw error; // Re-throw error for further handling
   }
 }
-
 
 // Update the JSON file on GitHub
 async function updateJSONFile(content, sha) {
@@ -67,7 +67,6 @@ app.get('/get-domains', async (req, res) => {
   }
 });
 
-
 // Endpoint to insert a book
 app.post('/insert-book', async (req, res) => {
   const { domain, book } = req.body;
@@ -94,6 +93,22 @@ app.post('/insert-book', async (req, res) => {
       json.push(domainEntry);
     }
     domainEntry.books.push(book);
+
+    // Send PDF Link to external library service
+    try {
+      const response = await axios.post('https://central-library.onrender.com/saveLibraryView', {
+        isbn: book.ISBN,
+        pdfLink: book.pdfLink
+      });
+
+      if (response.status === 200) {
+        console.log('PDF link saved successfully');
+      } else {
+        console.error('Failed to save PDF link');
+      }
+    } catch (error) {
+      console.error('Error saving PDF link:', error);
+    }
 
     // Update the file
     await updateJSONFile(json, sha);
@@ -128,8 +143,7 @@ app.get('/search-authors', async (req, res) => {
       console.error('Error searching authors:', error);
       res.status(500).json({ message: 'Error searching authors' });
     }
-  });
-  
+});
 
 const PORT = 3000;
 app.listen(PORT, () => {

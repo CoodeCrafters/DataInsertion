@@ -207,9 +207,10 @@
                     Author: author,
                     ISBN: isbn,
                     year: parseInt(year, 10),
-                    bookCover: bookCover
-                }
-            };
+                    bookCover: bookCover,
+                    pdfLink: pdfLink  // Include PDF link here
+    }
+};
 
             try {
                 const response = await fetch(`${BASE_URL}/insert-book`, {
@@ -311,8 +312,11 @@
         <label for="bookCover">Book Cover URL:</label><br>
         <input type="url" id="bookCover" required><br><br>
 
-        <button type="submit">Insert Book</button>
-    </form>
+       <!-- New PDF Link Input Box -->
+       <label for="pdfLink">PDF Link:</label><br>
+       <input type="url" id="pdfLink" required><br><br>
+       <button type="submit">Insert Book</button>
+   </form>
 </body>
 
 </html>
