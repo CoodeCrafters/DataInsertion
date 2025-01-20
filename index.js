@@ -1,18 +1,37 @@
+require('dotenv').config(); // Load environment variables from .env file
+
+const mongoose = require('mongoose');
+const axios = require('axios');
 const express = require('express');
 const bodyParser = require('body-parser');
-const axios = require('axios');
-const cors = require('cors'); // Importing CORS
+const cors = require('cors');
+
+// Load credentials from environment variables
+const mongoUri = process.env.MONGO_URI;
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+const REPO_OWNER = process.env.REPO_OWNER;
+const REPO_NAME = process.env.REPO_NAME;
+const FILE_PATH = process.env.FILE_PATH;
+
+mongoose
+  .connect(mongoUri, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
+  .then(() => console.log('Connected to MongoDB Atlas'))
+  .catch((err) => console.error('Error connecting to MongoDB Atlas:', err));
+
+// Create Mongoose Schema and Model for LibraryView
+const libraryViewSchema = new mongoose.Schema({
+  isbn: String,
+  pdf_link: String,
+});
+
+const LibraryView = mongoose.model('LibraryView', libraryViewSchema);
 
 const app = express();
-app.use(cors()); // Enable CORS for all routes
+app.use(cors()); // Enable CORS
 app.use(bodyParser.json());
-
-
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-const REPO_OWNER = 'CoodeCrafters';
-const REPO_NAME = 'AsepProject';
-const FILE_PATH = 'testing/resources1.json'; // Path in the repository
-
 
 // Fetch the current JSON file from GitHub
 async function fetchJSONFile() {
@@ -49,36 +68,34 @@ async function updateJSONFile(content, sha) {
   return response.data;
 }
 
-// Endpoint to fetch domains
-app.get('/get-domains', async (req, res) => {
-  try {
-    const { json } = await fetchJSONFile();
-    
-    // Ensure that json is an array before proceeding
-    if (Array.isArray(json)) {
-      const domains = json.map(entry => entry.domain);
-      res.json(domains);
-    } else {
-      res.status(500).json({ message: 'Invalid JSON format' });
-    }
-  } catch (error) {
-    console.error('Error fetching domains:', error);
-    res.status(500).json({ message: 'Error fetching domains' });
-  }
-});
-
-// Endpoint to insert a book
+// Endpoint to insert a book and save PDF link in MongoDB
 app.post('/insert-book', async (req, res) => {
   const { domain, book } = req.body;
 
   try {
+    // Check if the PDF link and ISBN are provided
+    if (!book.pdfLink || !book.ISBN) {
+      return res.status(400).json({ message: 'PDF link and ISBN are required.' });
+    }
+
+    // Save PDF link to MongoDB (LibraryView collection)
+    const libraryView = new LibraryView({
+      isbn: book.ISBN,
+      pdf_link: book.pdfLink, // Directly save the PDF link in the database
+    });
+
+    await libraryView.save(); // Save the PDF link to MongoDB
+
+    console.log('PDF link saved to MongoDB successfully');
+
+    // Now proceed with saving the book to the JSON file on GitHub
     const { json, sha } = await fetchJSONFile();
 
     // Check if the book already exists
     for (const entry of json) {
       if (entry.domain === domain) {
         const duplicate = entry.books.find(
-          b => b.BookName === book.BookName || b.ISBN === book.ISBN
+          (b) => b.BookName === book.BookName || b.ISBN === book.ISBN
         );
         if (duplicate) {
           return res.status(400).json({ message: 'Book with the same name or ISBN already exists.' });
@@ -86,39 +103,19 @@ app.post('/insert-book', async (req, res) => {
       }
     }
 
-    // Remove pdfLink from the book object before saving it to the JSON
-    const { pdfLink, ...bookWithoutPdf } = book;
-
-    // Send PDF Link to external library service (to be saved there)
-    let pdfLinkSavedSuccessfully = false;
-    try {
-      const response = await axios.post('https://central-library.onrender.com/saveLibraryView', {
-        isbn: book.ISBN,
-        pdfLink: pdfLink
-      });
-
-      if (response.status === 200) {
-        console.log('PDF link saved successfully');
-        pdfLinkSavedSuccessfully = true;
-      } else {
-        console.error('Failed to save PDF link');
-      }
-    } catch (error) {
-      console.error('Error saving PDF link:', error);
-    }
-
-    // If the PDF link was not saved successfully, don't save the book to the GitHub JSON
-    if (!pdfLinkSavedSuccessfully) {
-      return res.status(500).json({ message: 'Failed to save PDF link. Book not added.' });
-    }
-
-    // Add the book to the domain only if PDF link was saved successfully
-    let domainEntry = json.find(entry => entry.domain === domain);
+    // Add the book to the domain (without the pdfLink, as it's already saved in MongoDB)
+    let domainEntry = json.find((entry) => entry.domain === domain);
     if (!domainEntry) {
       domainEntry = { domain, books: [] };
       json.push(domainEntry);
     }
-    domainEntry.books.push(bookWithoutPdf); // Save the book without the pdfLink in the JSON
+    domainEntry.books.push({
+      BookName: book.BookName,
+      Author: book.Author,
+      ISBN: book.ISBN,
+      year: book.year,
+      bookCover: book.bookCover,
+    });
 
     // Update the JSON file on GitHub
     await updateJSONFile(json, sha);
@@ -128,34 +125,6 @@ app.post('/insert-book', async (req, res) => {
     console.error('Error inserting book:', error);
     res.status(500).json({ message: 'Error inserting book' });
   }
-});
-
-
-
-// Endpoint to search authors
-app.get('/search-authors', async (req, res) => {
-    const { query } = req.query;
-  
-    if (!query) {
-      return res.status(400).json({ message: 'Query is required' });
-    }
-  
-    try {
-      const { json } = await fetchJSONFile();
-  
-      // Collect all unique author names across all domains
-      const authors = json.flatMap(entry => entry.books.map(book => book.Author));
-  
-      // Filter authors based on the query (case-insensitive matching)
-      const matchingAuthors = [...new Set(authors)].filter(author =>
-        author.toLowerCase().includes(query.toLowerCase())
-      );
-  
-      res.json(matchingAuthors);
-    } catch (error) {
-      console.error('Error searching authors:', error);
-      res.status(500).json({ message: 'Error searching authors' });
-    }
 });
 
 const PORT = 3000;
