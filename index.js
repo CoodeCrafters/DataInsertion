@@ -16,12 +16,23 @@ const FILE_PATH = 'testing/resources1.json'; // Path in the repository
 // Fetch the current JSON file from GitHub
 async function fetchJSONFile() {
   const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`;
-  const response = await axios.get(url, {
-    headers: { Authorization: `Bearer ${GITHUB_TOKEN}` }
-  });
-  const content = Buffer.from(response.data.content, 'base64').toString('utf-8');
-  return { json: JSON.parse(content), sha: response.data.sha };
+  
+  try {
+    const response = await axios.get(url, {
+      headers: { Authorization: `Bearer ${GITHUB_TOKEN}` }
+    });
+    
+    const content = Buffer.from(response.data.content, 'base64').toString('utf-8');
+    console.log('File fetched successfully'); // Success message
+    
+    return { json: JSON.parse(content), sha: response.data.sha };
+
+  } catch (error) {
+    console.error('Error fetching file:', error); // Error message if failed
+    throw error; // Re-throw error for further handling
+  }
 }
+
 
 // Update the JSON file on GitHub
 async function updateJSONFile(content, sha) {
