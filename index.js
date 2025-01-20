@@ -8,7 +8,7 @@ app.use(cors()); // Enable CORS for all routes
 app.use(bodyParser.json());
 
 
-const GITHUB_TOKEN = '';
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 const REPO_OWNER = 'CoodeCrafters';
 const REPO_NAME = 'AsepProject';
 const FILE_PATH = 'testing/resources1.json'; // Path in the repository
