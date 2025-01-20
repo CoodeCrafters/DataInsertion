@@ -1,9 +1,12 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const axios = require('axios');
+const cors = require('cors'); // Importing CORS
 
 const app = express();
+app.use(cors()); // Enable CORS for all routes
 app.use(bodyParser.json());
+
 
 const GITHUB_TOKEN = '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';
 const REPO_OWNER = 'CoodeCrafters';
