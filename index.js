@@ -86,19 +86,22 @@ app.post('/insert-book', async (req, res) => {
       }
     }
 
+    // Remove pdfLink from the book object before saving it to the JSON
+    const { pdfLink, ...bookWithoutPdf } = book;
+
     // Add the book to the domain
     let domainEntry = json.find(entry => entry.domain === domain);
     if (!domainEntry) {
       domainEntry = { domain, books: [] };
       json.push(domainEntry);
     }
-    domainEntry.books.push(book);
+    domainEntry.books.push(bookWithoutPdf); // Save the book without the pdfLink in the JSON
 
-    // Send PDF Link to external library service
+    // Send PDF Link to external library service (to be saved there)
     try {
       const response = await axios.post('https://central-library.onrender.com/saveLibraryView', {
         isbn: book.ISBN,
-        pdfLink: book.pdfLink
+        pdfLink: pdfLink
       });
 
       if (response.status === 200) {
@@ -110,7 +113,7 @@ app.post('/insert-book', async (req, res) => {
       console.error('Error saving PDF link:', error);
     }
 
-    // Update the file
+    // Update the JSON file on GitHub
     await updateJSONFile(json, sha);
     res.json({ message: 'Book added successfully.' });
   } catch (error) {
@@ -118,6 +121,7 @@ app.post('/insert-book', async (req, res) => {
     res.status(500).json({ message: 'Error inserting book' });
   }
 });
+
 
 // Endpoint to search authors
 app.get('/search-authors', async (req, res) => {
