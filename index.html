@@ -24,10 +24,13 @@
     }
   </style>
   <script>
+    // Base API URL
+    const BASE_URL = "https://datainsertion.onrender.com";
+
     // Fetch existing domains for the dropdown
     async function fetchDomains() {
       try {
-        const response = await fetch('/get-domains');
+        const response = await fetch(`${BASE_URL}/get-domains`);
         const domains = await response.json();
 
         const dropdown = document.getElementById('domainDropdown');
@@ -47,6 +50,7 @@
         dropdown.appendChild(othersOption);
       } catch (error) {
         console.error('Error fetching domains:', error);
+        alert('Failed to load domains. Please try again later.');
       }
     }
 
@@ -91,7 +95,7 @@
       };
 
       try {
-        const response = await fetch('/insert-book', {
+        const response = await fetch(`${BASE_URL}/insert-book`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
@@ -109,8 +113,9 @@
         alert('An error occurred.');
       }
     }
- // Fetch author suggestions as the user types
- async function fetchAuthorSuggestions() {
+
+    // Fetch author suggestions as the user types
+    async function fetchAuthorSuggestions() {
       const authorInput = document.getElementById('author');
       const suggestionsContainer = document.getElementById('authorSuggestions');
       const query = authorInput.value.trim();
@@ -121,7 +126,7 @@
       }
 
       try {
-        const response = await fetch(`/search-authors?query=${encodeURIComponent(query)}`);
+        const response = await fetch(`${BASE_URL}/search-authors?query=${encodeURIComponent(query)}`);
         const suggestions = await response.json();
 
         if (response.ok && suggestions.length > 0) {
@@ -144,13 +149,14 @@
         suggestionsContainer.style.display = 'none';
       }
     }
+
     // Initialize dropdown on page load
     document.addEventListener('DOMContentLoaded', fetchDomains);
   </script>
 </head>
 <body>
-    <h1>Insert Book into JSON</h1>
-    <form onsubmit="event.preventDefault(); insertBook();">
+  <h1>Insert Book into JSON</h1>
+  <form onsubmit="event.preventDefault(); insertBook();">
     <label for="domainDropdown">Select Domain:</label><br>
     <select id="domainDropdown" onchange="toggleOtherDomain()" required></select><br><br>
 
@@ -178,5 +184,4 @@
     <button type="submit">Insert Book</button>
   </form>
 </body>
-
 </html>
