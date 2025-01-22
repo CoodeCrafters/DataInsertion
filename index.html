@@ -276,14 +276,7 @@
         document.addEventListener('DOMContentLoaded', fetchDomains);
 
         // Clear all input fields
-        function clearFields() {
-            document.getElementById('bookName').value = '';
-            document.getElementById('author').value = '';
-            document.getElementById('isbn').value = '';
-            document.getElementById('year').value = '';
-            document.getElementById('bookCover').value = '';
-            document.getElementById('otherDomain').value = '';
-            function clearFields() {
+        function clearFields()  {
     document.getElementById('bookName').value = '';
     document.getElementById('author').value = '';
     document.getElementById('isbn').value = '';
@@ -293,13 +286,43 @@
     document.getElementById('pdfLink').value = ''; // Clear the PDF link field
 }
 
+        
+
+        // Fetch domain entries and populate the table
+    async function fetchDomainEntries() {
+        const tableBody = document.getElementById('domainEntriesBody');
+
+        try {
+            const response = await fetch(`${BASE_URL}/get-domain-entries`);
+            const domainEntries = await response.json();
+
+            // Clear existing table rows
+            tableBody.innerHTML = '';
+
+            // Populate table rows with domain entries
+            domainEntries.forEach(entry => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">${entry.domain}</td>
+                    <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">${entry.count}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        } catch (error) {
+            console.error('Error fetching domain entries:', error);
+            alert('Failed to fetch domain entries. Please try again later.');
         }
+    }
+
+    // Call the function to fetch and display domain entries on page load
+    document.addEventListener('DOMContentLoaded', fetchDomainEntries);
 
     </script>
 </head>
 
 <body>
     <h1>Insert Book into JSON</h1>
+
     <form onsubmit="event.preventDefault(); insertBook();">
         <label for="domainDropdown">Select Domain:</label><br>
         <select id="domainDropdown" onchange="toggleOtherDomain()" required></select><br><br>
@@ -330,6 +353,24 @@
         <input type="url" id="pdfLink" required><br><br>
         <button type="submit">Insert Book</button>
     </form>
+
+    <div style="display: flex; justify-content: space-between;">
+        <!-- Table for domain data -->
+        <div id="domainTableContainer" style="width: 45%; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);">
+            <h2>Domain Entries</h2>
+            <table id="domainTable" style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr>
+                        <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Domain</th>
+                        <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Entry Count</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    
+      
+    
 </body>
 
 </html>
