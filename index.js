@@ -163,6 +163,29 @@ app.get('/search-authors', async (req, res) => {
   }
 });
 
+// Endpoint to fetch domain counts
+app.get('/get-domain-entries', async (req, res) => {
+  try {
+    const { json } = await fetchJSONFile();
+
+    if (Array.isArray(json)) {
+      // Map domains to their respective counts
+      const domainCounts = json.map((entry) => ({
+        domain: entry.domain,
+        count: entry.books.length,
+      }));
+
+      res.json(domainCounts);
+    } else {
+      res.status(500).json({ message: 'Invalid JSON format' });
+    }
+  } catch (error) {
+    console.error('Error fetching domain entries:', error);
+    res.status(500).json({ message: 'Error fetching domain entries' });
+  }
+});
+
+
 const PORT = 3000;
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
