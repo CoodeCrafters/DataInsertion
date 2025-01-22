@@ -287,35 +287,40 @@
 }
 
         
-
-        // Fetch domain entries and populate the table
-    async function fetchDomainEntries() {
-        const tableBody = document.getElementById('domainEntriesBody');
-
-        try {
-            const response = await fetch(`${BASE_URL}/get-domain-entries`);
-            const domainEntries = await response.json();
-
-            // Clear existing table rows
-            tableBody.innerHTML = '';
-
-            // Populate table rows with domain entries
-            domainEntries.forEach(entry => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">${entry.domain}</td>
-                    <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">${entry.count}</td>
-                `;
-                tableBody.appendChild(row);
-            });
-        } catch (error) {
-            console.error('Error fetching domain entries:', error);
-            alert('Failed to fetch domain entries. Please try again later.');
-        }
+async function fetchDomainEntries() {
+    const domainEntriesBody = document.getElementById('domainEntriesBody');
+    if (!domainEntriesBody) {
+        console.error('Table body with id "domainEntriesBody" not found in the DOM.');
+        return;
     }
 
-    // Call the function to fetch and display domain entries on page load
-    document.addEventListener('DOMContentLoaded', fetchDomainEntries);
+    try {
+        const response = await fetch(`${BASE_URL}/get-domain-entries`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch domain entries');
+        }
+
+        const domainEntries = await response.json();
+
+        // Populate the table with fetched data
+        domainEntriesBody.innerHTML = ''; // Clear any existing rows
+        domainEntries.forEach((entry) => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td style="padding: 12px; border: 1px solid #ddd; text-align: center;">${entry.domain}</td>
+                <td style="padding: 12px; border: 1px solid #ddd; text-align: center;">${entry.count}</td>
+            `;
+            domainEntriesBody.appendChild(row);
+        });
+    } catch (error) {
+        console.error('Error fetching domain entries:', error);
+        alert('Could not fetch domain entries. Please try again.');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    fetchDomainEntries();
+});
 
     </script>
 </head>
