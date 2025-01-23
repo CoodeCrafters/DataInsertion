@@ -86,7 +86,6 @@ app.get('/get-domains', async (req, res) => {
   }
 });
 
-// Endpoint to insert a book
 app.post('/insert-book', async (req, res) => {
   const { domain, book } = req.body;
 
@@ -107,19 +106,22 @@ app.post('/insert-book', async (req, res) => {
       }
     }
 
-    // Add the book to the domain
+    // Add the book to the domain without the PDF link
     let domainEntry = json.find((entry) => entry.domain === domain);
     if (!domainEntry) {
       domainEntry = { domain, books: [] };
       json.push(domainEntry);
     }
-    domainEntry.books.push(book);
 
-    // Save the PDF link in MongoDB
+    // Add the book to the domain, without pdfLink
+    const { pdfLink, ...bookWithoutPdfLink } = book; // Remove the PDF link from the book object
+    domainEntry.books.push(bookWithoutPdfLink);
+
+    // Save the PDF link in MongoDB (not in the JSON file)
     try {
       const libraryView = new LibraryView({
         isbn: book.ISBN,
-        pdf_link: book.pdfLink,
+        pdf_link: pdfLink,
       });
 
       await libraryView.save();
@@ -128,7 +130,7 @@ app.post('/insert-book', async (req, res) => {
       console.error('Error saving PDF link in MongoDB:', error);
     }
 
-    // Update the JSON file on GitHub
+    // Update the JSON file on GitHub, without the PDF link
     await updateJSONFile(json, sha);
     res.json({ message: 'Book added successfully.' });
   } catch (error) {
@@ -136,6 +138,7 @@ app.post('/insert-book', async (req, res) => {
     res.status(500).json({ message: 'Error inserting book' });
   }
 });
+
 
 // Endpoint to search authors
 app.get('/search-authors', async (req, res) => {
