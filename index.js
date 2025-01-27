@@ -198,21 +198,31 @@ const audiobookSchema = new mongoose.Schema({
 
 const Audiobook = mongoose.model('Audiobook', audiobookSchema);
 
-// Function to fetch the audio resources JSON from the GitHub repository
 async function fetchAudioResourcesJSON() {
   const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH1}`;
-  try {
-    const response = await axios.get(url, {
-      headers: { Authorization: `Bearer ${GITHUB_TOKEN}` },
-    });
+  let attempts = 0;
+  const maxAttempts = 3;
 
-    const content = Buffer.from(response.data.content, 'base64').toString('utf-8');
-    return JSON.parse(content); // Return the parsed JSON content
-  } catch (error) {
-    console.error('Error fetching audio resources file:', error);
-    throw error;
+  while (attempts < maxAttempts) {
+    try {
+      const response = await axios.get(url, {
+        headers: { Authorization: `Bearer ${GITHUB_TOKEN}` },
+      });
+
+      const content = Buffer.from(response.data.content, 'base64').toString('utf-8');
+      return JSON.parse(content); // Return the parsed JSON content
+    } catch (error) {
+      attempts++;
+      console.error(`Attempt ${attempts} failed: ${error.message}`);
+      if (attempts >= maxAttempts) {
+        throw new Error('Max retry attempts reached. Failed to fetch audio resources.');
+      }
+      // Optionally add a delay before retrying (e.g., 1 second)
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
   }
 }
+
 
 
 app.get('/getfetchaudio', async (req, res) => {
@@ -226,6 +236,11 @@ app.get('/getfetchaudio', async (req, res) => {
 
   try {
     const audioResources = await fetchAudioResourcesJSON(); // Fetch the audio resources JSON
+
+    // Check if the audioResources structure is valid
+    if (!Array.isArray(audioResources)) {
+      return res.status(500).json({ message: 'Invalid audio resources format' });
+    }
 
     // Search through all domains and entries to find the matching ID
     const suggestions = audioResources
@@ -246,9 +261,10 @@ app.get('/getfetchaudio', async (req, res) => {
     }
   } catch (error) {
     console.error('Error fetching suggestions:', error);
-    res.status(500).json({ message: 'Error fetching suggestions' });
+    res.status(500).json({ message: 'Error fetching suggestions', error: error.message });
   }
 });
+
 
 app.post('/save-audiodetails', async (req, res) => {
   const { 
@@ -259,7 +275,7 @@ app.post('/save-audiodetails', async (req, res) => {
     total_duration, 
     genre, 
     year_of_published, 
-    book_cover
+    book_cover 
   } = req.body;
 
   if (!id || !mp3_link || !mp3_title) {
@@ -267,35 +283,35 @@ app.post('/save-audiodetails', async (req, res) => {
   }
 
   try {
-    // Save to MongoDB
+    // Check if the audiobook already exists in MongoDB
     const existingAudiobook = await Audiobook.findOne({ id });
 
     if (existingAudiobook) {
+      // If it exists, update it
       existingAudiobook.mp3_link = mp3_link;
       existingAudiobook.mp3_title = mp3_title;
       await existingAudiobook.save();
       return res.json({ message: 'Audiobook updated successfully in MongoDB.' });
     }
 
-    // Create new audiobook entry in MongoDB
+    // If it doesn't exist, create a new entry
     const newAudiobook = new Audiobook({ id, mp3_link, mp3_title });
     await newAudiobook.save();
 
-    // Fetch audio-resources.json to update with new data
+    // Now, let's update the GitHub audio-resources.json file with the new audiobook details
     const audioResources = await fetchAudioResourcesJSON();
     
-    // Find the domain entry in the audio-resources.json file
+    // Find or create the domain entry
     let domainEntry = audioResources.find(entry => entry.domain === domain);
-
-    // If the domain doesn't exist, create a new domain
     if (!domainEntry) {
       domainEntry = { domain, entries: [] };
       audioResources.push(domainEntry);
     }
 
-    // Find the existing entry by ID, or create a new one
+    // Check if the entry already exists in the domain
     let entry = domainEntry.entries.find(entry => entry.id === id);
     if (!entry) {
+      // If it doesn't exist, create it
       entry = { id, mp3_link, mp3_title };
       domainEntry.entries.push(entry);
     }
@@ -306,15 +322,16 @@ app.post('/save-audiodetails', async (req, res) => {
     entry.year_of_published = year_of_published;
     entry.book_cover = book_cover;
 
-    // Update the GitHub file (audio-resources.json)
+    // Now, update the GitHub file
     await updateJSONFile(audioResources);
 
     res.json({ message: 'Audiobook details saved successfully.' });
   } catch (error) {
     console.error('Error saving audiobook details:', error);
-    res.status(500).json({ message: 'Error saving audiobook details' });
+    res.status(500).json({ message: 'Error saving audiobook details', error: error.message });
   }
 });
+
 
 async function updateJSONFile(content) {
   const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH1}`;
