@@ -222,13 +222,15 @@ app.get('/get-suggestions', async (req, res) => {
     return res.status(400).json({ message: 'ID is required' });
   }
 
+  console.log('Received ID:', id); // Log to check if ID is correctly passed
+
   try {
     const audioResources = await fetchAudioResourcesJSON(); // Fetch the audio resources JSON
 
     // Search through all domains and entries to find the matching ID
     const suggestions = audioResources
       .flatMap((entry) => entry.entries) // Flatten the entries under each domain
-      .filter((entry) => entry.id === id); // Match the unique ID
+      .filter((entry) => entry.id === id); // Match the unique ID (comparison with UUID)
 
     if (suggestions.length > 0) {
       res.json(suggestions[0]); // Return the first matching entry
@@ -240,6 +242,7 @@ app.get('/get-suggestions', async (req, res) => {
     res.status(500).json({ message: 'Error fetching suggestions' });
   }
 });
+
 
 
 // Endpoint to insert audiobook data
