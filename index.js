@@ -197,7 +197,6 @@ const audiobookSchema = new mongoose.Schema({
 });
 
 const Audiobook = mongoose.model('Audiobook', audiobookSchema);
-const axios = require('axios'); // Make sure axios is imported
 
 // Function to fetch the audio resources JSON from the GitHub repository
 async function fetchAudioResourcesJSON() {
