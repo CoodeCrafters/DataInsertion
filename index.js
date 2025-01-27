@@ -317,7 +317,7 @@ app.post('/update-audiobook-details', async (req, res) => {
         entry.genre = genre || entry.genre;
         entry.bookCover_url = coverPhoto || entry.bookCover_url;
         entry.year_of_published = year || entry.year_of_published;
-        entry.mp3Details = mp3Details; // Update mp3Details array
+        entry.mp3Details = mp3Details.map((mp3) => ({ title: mp3.title }));
         entryFound = true;
         break;
       }
