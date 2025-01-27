@@ -200,7 +200,7 @@ const Audiobook = mongoose.model('Audiobook', audiobookSchema);
 
 // Fetch audio-resources.json from GitHub
 async function fetchAudioResourcesJSON() {
-  const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`;
+  const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH1}`;
   try {
     const response = await axios.get(url, {
       headers: { Authorization: `Bearer ${GITHUB_TOKEN}` },
