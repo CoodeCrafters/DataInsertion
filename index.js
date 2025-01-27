@@ -217,18 +217,21 @@ async function fetchAudioResourcesJSON() {
 // Endpoint to get suggestions (fetches author, title, and domain based on ID)
 app.get('/get-suggestions', async (req, res) => {
   const { id } = req.query;
+  
   if (!id) {
     return res.status(400).json({ message: 'ID is required' });
   }
 
   try {
-    const audioResources = await fetchAudioResourcesJSON();
+    const audioResources = await fetchAudioResourcesJSON(); // Fetch the audio resources JSON
+
+    // Search through all domains and entries to find the matching ID
     const suggestions = audioResources
-      .flatMap((entry) => entry.entries)
-      .filter((entry) => entry.id === id);
+      .flatMap((entry) => entry.entries) // Flatten the entries under each domain
+      .filter((entry) => entry.id === id); // Match the unique ID
 
     if (suggestions.length > 0) {
-      res.json(suggestions[0]); // Return first matching entry
+      res.json(suggestions[0]); // Return the first matching entry
     } else {
       res.status(404).json({ message: 'No suggestions found for this ID' });
     }
@@ -237,6 +240,7 @@ app.get('/get-suggestions', async (req, res) => {
     res.status(500).json({ message: 'Error fetching suggestions' });
   }
 });
+
 
 // Endpoint to insert audiobook data
 app.post('/insertaudiobook', async (req, res) => {
