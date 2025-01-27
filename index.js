@@ -355,6 +355,46 @@ async function updateJSONFile(content) {
   return response.data;
 }
 
+// Endpoint to fetch audiobook suggestions based on ID
+app.get('/get-suggestions', async (req, res) => {
+  const { id } = req.query;
+
+  if (!id) {
+    return res.status(400).json({ message: 'ID is required' });
+  }
+
+  console.log('Received ID:', id); // Log to check if ID is correctly passed
+
+  try {
+    const audioResources = await fetchAudioResourcesJSON(); // Fetch the audio resources JSON
+
+    // Check if the audioResources structure is valid
+    if (!Array.isArray(audioResources)) {
+      return res.status(500).json({ message: 'Invalid audio resources format' });
+    }
+
+    // Search through all domains and entries to find the matching ID
+    const suggestions = audioResources
+      .flatMap((entry) => entry.entries) // Flatten the entries under each domain
+      .filter((entry) => entry.id === id); // Match the unique ID
+
+    if (suggestions.length > 0) {
+      // Send the matching suggestions with domain, title, author, and ID
+      const suggestionData = suggestions.map((entry) => ({
+        domain: entry.domain,
+        title: entry.title,
+        author: entry.author,
+        id: entry.id,
+      }));
+      res.json(suggestionData); // Return the matched suggestions
+    } else {
+      res.status(404).json({ message: 'No suggestions found for this ID' });
+    }
+  } catch (error) {
+    console.error('Error fetching suggestions:', error);
+    res.status(500).json({ message: 'Error fetching suggestions', error: error.message });
+  }
+});
 
 
 const PORT = 3000;
