@@ -265,75 +265,8 @@ app.get('/get-suggestions', async (req, res) => {
   }
 });
 
-
-app.post('/save-audiodetails', async (req, res) => {
-  const { 
-    id, 
-    mp3_link, 
-    mp3_title, 
-    domain, 
-    total_duration, 
-    genre, 
-    year_of_published, 
-    book_cover 
-  } = req.body;
-
-  if (!id || !mp3_link || !mp3_title) {
-    return res.status(400).json({ message: 'id, mp3_link, and mp3_title are required' });
-  }
-
-  try {
-    // Check if the audiobook already exists in MongoDB
-    const existingAudiobook = await Audiobook.findOne({ id });
-
-    if (existingAudiobook) {
-      // If it exists, update it
-      existingAudiobook.mp3_link = mp3_link;
-      existingAudiobook.mp3_title = mp3_title;
-      await existingAudiobook.save();
-      return res.json({ message: 'Audiobook updated successfully in MongoDB.' });
-    }
-
-    // If it doesn't exist, create a new entry
-    const newAudiobook = new Audiobook({ id, mp3_link, mp3_title });
-    await newAudiobook.save();
-
-    // Now, let's update the GitHub audio-resources.json file with the new audiobook details
-    const audioResources = await fetchAudioResourcesJSON();
-    
-    // Find or create the domain entry
-    let domainEntry = audioResources.find(entry => entry.domain === domain);
-    if (!domainEntry) {
-      domainEntry = { domain, entries: [] };
-      audioResources.push(domainEntry);
-    }
-
-    // Check if the entry already exists in the domain
-    let entry = domainEntry.entries.find(entry => entry.id === id);
-    if (!entry) {
-      // If it doesn't exist, create it
-      entry = { id, mp3_link, mp3_title };
-      domainEntry.entries.push(entry);
-    }
-
-    // Update the entry with additional details
-    entry.total_duration = total_duration;
-    entry.genre = genre;
-    entry.year_of_published = year_of_published;
-    entry.book_cover = book_cover;
-
-    // Now, update the GitHub file
-    await updateJSONFile(audioResources);
-
-    res.json({ message: 'Audiobook details saved successfully.' });
-  } catch (error) {
-    console.error('Error saving audiobook details:', error);
-    res.status(500).json({ message: 'Error saving audiobook details', error: error.message });
-  }
-});
-
-
-async function updateJSONFile(content) {
+// Function to update the audio resources JSON file on GitHub
+async function updateAudioResourcesJSON(content) {
   const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH1}`;
 
   // Get the current file's metadata to retrieve its SHA for updating
@@ -346,7 +279,7 @@ async function updateJSONFile(content) {
   const response = await axios.put(
     url,
     {
-      message: 'Update audiobook data',
+      message: 'Update audiobook details with new parameters',
       content: Buffer.from(JSON.stringify(content, null, 2)).toString('base64'),
       sha: sha, // Include the current file's SHA
     },
@@ -355,7 +288,63 @@ async function updateJSONFile(content) {
   return response.data;
 }
 
+// Endpoint to add details to an audiobook entry and save to MongoDB
+app.post('/update-audiobook-details', async (req, res) => {
+  const { id, total_duration, genre, bookCover_url, year_of_published, mp3_link, mp3_title } = req.body;
 
+  // Validate required fields
+  if (!id || !mp3_link || !mp3_title) {
+    return res.status(400).json({ message: 'id, mp3_link, and mp3_title are required' });
+  }
+
+  try {
+    // Fetch the current audio resources JSON
+    const audioResources = await fetchAudioResourcesJSON();
+
+    // Find the domain and entry that matches the given id
+    let entryFound = false;
+    for (const domainEntry of audioResources) {
+      const entry = domainEntry.entries.find((entry) => entry.id === id);
+      if (entry) {
+        // Update the entry with additional details
+        entry.total_duration = total_duration || entry.total_duration;
+        entry.genre = genre || entry.genre;
+        entry.bookCover_url = bookCover_url || entry.bookCover_url;
+        entry.year_of_published = year_of_published || entry.year_of_published;
+        entry.mp3_title = mp3_title; // Update mp3_title if provided
+
+        // Mark the entry as found
+        entryFound = true;
+        break;
+      }
+    }
+
+    if (!entryFound) {
+      return res.status(404).json({ message: 'No audiobook entry found with this ID' });
+    }
+
+    // Update the JSON file on GitHub with the modified entry
+    await updateAudioResourcesJSON(audioResources);
+
+    // Save the audiobook details to MongoDB (only mp3_title, mp3_link, id)
+    const existingAudiobook = await Audiobook.findOne({ id });
+    if (existingAudiobook) {
+      // Update if the audiobook already exists
+      existingAudiobook.mp3_link = mp3_link;
+      existingAudiobook.mp3_title = mp3_title;
+      await existingAudiobook.save();
+    } else {
+      // Create a new audiobook entry if it doesn't exist
+      const newAudiobook = new Audiobook({ id, mp3_link, mp3_title });
+      await newAudiobook.save();
+    }
+
+    res.json({ message: 'Audiobook details updated successfully.' });
+  } catch (error) {
+    console.error('Error updating audiobook details:', error);
+    res.status(500).json({ message: 'Error updating audiobook details', error: error.message });
+  }
+});
 
 const PORT = 3000;
 app.listen(PORT, () => {
