@@ -197,6 +197,24 @@ const audiobookSchema = new mongoose.Schema({
 });
 
 const Audiobook = mongoose.model('Audiobook', audiobookSchema);
+const axios = require('axios'); // Make sure axios is imported
+
+// Function to fetch the audio resources JSON from the GitHub repository
+async function fetchAudioResourcesJSON() {
+  const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH1}`;
+  try {
+    const response = await axios.get(url, {
+      headers: { Authorization: `Bearer ${GITHUB_TOKEN}` },
+    });
+
+    const content = Buffer.from(response.data.content, 'base64').toString('utf-8');
+    return JSON.parse(content); // Return the parsed JSON content
+  } catch (error) {
+    console.error('Error fetching audio resources file:', error);
+    throw error;
+  }
+}
+
 
 app.get('/getfetchaudio', async (req, res) => {
   const { id } = req.query;
