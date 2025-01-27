@@ -245,15 +245,16 @@ app.get('/get-suggestions', async (req, res) => {
 
     // Search through all domains and entries to find the matching ID
     const suggestions = audioResources
-      .flatMap((entry) => entry.entries) // Flatten the entries under each domain
+      .flatMap((entry) => entry.entries.map((item) => ({ ...item, domain: entry.domain }))) // Include the domain in each entry
       .filter((entry) => entry.id.includes(id)); // Match partial ID (at least 2 characters)
 
     if (suggestions.length > 0) {
-      // Send the matching suggestions with id, title, and author
+      // Send the matching suggestions with id, title, author, and domain
       const suggestionData = suggestions.map((entry) => ({
         id: entry.id,
         title: entry.title,
         author: entry.author,
+        domain: entry.domain, // Include the domain
       }));
       res.json(suggestionData); // Return the matched suggestions
     } else {
@@ -264,6 +265,7 @@ app.get('/get-suggestions', async (req, res) => {
     res.status(500).json({ message: 'Error fetching suggestions', error: error.message });
   }
 });
+
 
 // Function to update the audio resources JSON file on GitHub
 async function updateAudioResourcesJSON(content) {
