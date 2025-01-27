@@ -292,30 +292,24 @@ async function updateAudioResourcesJSON(content) {
 
 // Endpoint to add details to an audiobook entry and save to MongoDB
 app.post('/update-audiobook-details', async (req, res) => {
-  const { id, total_duration, genre, bookCover_url, year_of_published, mp3_link, mp3_title } = req.body;
+  const { id, totalDuration, genre, coverPhoto, year, mp3Details } = req.body;
 
-  // Validate required fields
-  if (!id || !mp3_link || !mp3_title) {
-    return res.status(400).json({ message: 'id, mp3_link, and mp3_title are required' });
+  if (!id || !mp3Details || mp3Details.some((mp3) => !mp3.link || !mp3.title)) {
+    return res.status(400).json({ message: 'id, mp3Details with valid links and titles are required' });
   }
 
   try {
-    // Fetch the current audio resources JSON
     const audioResources = await fetchAudioResourcesJSON();
-
-    // Find the domain and entry that matches the given id
     let entryFound = false;
+
     for (const domainEntry of audioResources) {
       const entry = domainEntry.entries.find((entry) => entry.id === id);
       if (entry) {
-        // Update the entry with additional details
-        entry.total_duration = total_duration || entry.total_duration;
+        entry.total_duration = totalDuration || entry.total_duration;
         entry.genre = genre || entry.genre;
-        entry.bookCover_url = bookCover_url || entry.bookCover_url;
-        entry.year_of_published = year_of_published || entry.year_of_published;
-        entry.mp3_title = mp3_title; // Update mp3_title if provided
-
-        // Mark the entry as found
+        entry.bookCover_url = coverPhoto || entry.bookCover_url;
+        entry.year_of_published = year || entry.year_of_published;
+        entry.mp3Details = mp3Details; // Update MP3 details array
         entryFound = true;
         break;
       }
@@ -325,19 +319,14 @@ app.post('/update-audiobook-details', async (req, res) => {
       return res.status(404).json({ message: 'No audiobook entry found with this ID' });
     }
 
-    // Update the JSON file on GitHub with the modified entry
     await updateAudioResourcesJSON(audioResources);
 
-    // Save the audiobook details to MongoDB (only mp3_title, mp3_link, id)
     const existingAudiobook = await Audiobook.findOne({ id });
     if (existingAudiobook) {
-      // Update if the audiobook already exists
-      existingAudiobook.mp3_link = mp3_link;
-      existingAudiobook.mp3_title = mp3_title;
+      existingAudiobook.mp3Details = mp3Details; // Update MP3 details
       await existingAudiobook.save();
     } else {
-      // Create a new audiobook entry if it doesn't exist
-      const newAudiobook = new Audiobook({ id, mp3_link, mp3_title });
+      const newAudiobook = new Audiobook({ id, mp3Details });
       await newAudiobook.save();
     }
 
@@ -347,6 +336,7 @@ app.post('/update-audiobook-details', async (req, res) => {
     res.status(500).json({ message: 'Error updating audiobook details', error: error.message });
   }
 });
+
 
 const PORT = 3000;
 app.listen(PORT, () => {
