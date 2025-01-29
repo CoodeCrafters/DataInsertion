@@ -350,7 +350,10 @@ app.post('/update-audiobook-details', async (req, res) => {
   }
 });
 
-
+// Define the /heartbeat endpoint
+app.get('/heartbeat', (req, res) => {
+  res.status(200).send('Server is alive');
+});
 
 const PORT = 3000;
 app.listen(PORT, () => {
