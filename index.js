@@ -401,43 +401,66 @@ app.get('/getaudiodetail', async (req, res) => {
 });
 
 // Endpoint to handle the POST request
-app.post('/submitquery', (req, res) => {
+app.post('/submitquery', async (req, res) => {
   const queryData = req.body;  // Assuming req.body contains the form data
 
   // Create a timestamp for the submission
   const timestamp = new Date().toISOString();
-
+  
   // Add the timestamp to the query data
   queryData.timestamp = timestamp;
 
-  // Get the file path from the environment variable (FILE_PATH2)
-  const filePath2 = process.env.FILE_PATH2;  // Using FILE_PATH2 as the destination for saving data
+  // GitHub API URL for the file you want to update
+  const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH2}`;
 
-  // Read the existing queries from the JSON file at FILE_PATH2
-  fs.readFile(filePath2, 'utf8', (err, data) => {
-    if (err) {
-      console.error('Error reading file:', err);
-      return res.status(500).json({ message: 'Error reading file' });
-    }
+  try {
+    // Step 1: Get the existing content of the file from GitHub
+    const response = await axios.get(url, {
+      headers: {
+        Authorization: `Bearer ${GITHUB_TOKEN}`,
+      },
+    });
 
+    // Step 2: Decode the content (GitHub stores the file content in base64)
+    const fileContent = Buffer.from(response.data.content, 'base64').toString('utf-8');
+    
+    // Step 3: Parse the existing queries (or use an empty array if the file is new)
     let queries = [];
-    if (data) {
-      queries = JSON.parse(data);  // Parse existing queries if any
+    if (fileContent) {
+      queries = JSON.parse(fileContent);  // Parse existing queries if any
     }
 
-    // Add the new query to the list
+    // Step 4: Add the new query to the list
     queries.push(queryData);
 
-    // Write the updated queries array back to the FILE_PATH2 JSON file
-    fs.writeFile(filePath2, JSON.stringify(queries, null, 2), 'utf8', (err) => {
-      if (err) {
-        console.error('Error writing file:', err);
-        return res.status(500).json({ message: 'Error saving query' });
-      }
+    // Step 5: Prepare the updated content
+    const updatedContent = JSON.stringify(queries, null, 2);
 
-      res.status(200).json({ message: 'Query submitted successfully' });
-    });
-  });
+    // Step 6: Encode the updated content to base64 for GitHub API
+    const encodedContent = Buffer.from(updatedContent).toString('base64');
+
+    // Step 7: Update the file content on GitHub via PUT request
+    await axios.put(
+      url,
+      {
+        message: 'Add new query to help & support file', // Commit message
+        content: encodedContent, // Updated content in base64
+        sha: response.data.sha, // SHA of the file to update
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${GITHUB_TOKEN}`,
+        },
+      }
+    );
+
+    // Step 8: Respond with success message
+    res.status(200).json({ message: 'Query submitted successfully' });
+
+  } catch (error) {
+    console.error('Error updating file on GitHub:', error);
+    res.status(500).json({ message: 'Error submitting query' });
+  }
 });
 
 // Define the /heartbeat endpoint
