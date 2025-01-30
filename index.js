@@ -200,6 +200,8 @@ const audiobookSchema = new mongoose.Schema({
 });
 
 const Audiobook = mongoose.model('Audiobook', audiobookSchema);
+module.exports = Audiobook;  // ✅ Export the model
+
 
 // Function to fetch the audio resources JSON file from GitHub
 async function fetchAudioResourcesJSON() {
@@ -363,6 +365,38 @@ app.post('/update-audiobook-details', async (req, res) => {
       message: 'Error updating audiobook details',
       error: error.message,
     });
+  }
+});
+
+app.get('/getaudiodetail', async (req, res) => {
+  try {
+    const { id, title } = req.query;
+
+    // Validate required fields
+    if (!id || !title) {
+      return res.status(400).json({ message: "Both 'id' and 'title' are required." });
+    }
+
+    // Find audiobook entry by ID
+    const audiobook = await Audiobook.findOne({ id });
+    if (!audiobook) {
+      return res.status(404).json({ message: 'Audiobook not found.' });
+    }
+
+    // Find matching MP3 detail by title
+    const mp3Detail = audiobook.mp3Details.find(mp3 => mp3.title === title);
+    if (!mp3Detail) {
+      return res.status(404).json({ message: 'MP3 title not found in audiobook.' });
+    }
+
+    // Encode link in binary format (Buffer)
+    const binaryLink = Buffer.from(mp3Detail.link, 'utf-8');
+
+    res.status(200).json({ link: binaryLink.toString('binary') });
+
+  } catch (error) {
+    console.error('Error fetching audio details:', error);
+    res.status(500).json({ message: 'Internal Server Error', error: error.message });
   }
 });
 
