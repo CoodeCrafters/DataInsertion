@@ -12,6 +12,7 @@ const REPO_OWNER = process.env.REPO_OWNER;
 const REPO_NAME = process.env.REPO_NAME;
 const FILE_PATH = process.env.FILE_PATH;
 const FILE_PATH1 = process.env.FILE_PATH1;
+const FILE_PATH2 = process.env.FILE_PATH2
 
 const app = express();
 app.use(cors());
@@ -399,7 +400,45 @@ app.get('/getaudiodetail', async (req, res) => {
   }
 });
 
+// Endpoint to handle the POST request
+app.post('/submitquery', (req, res) => {
+  const queryData = req.body;  // Assuming req.body contains the form data
 
+  // Create a timestamp for the submission
+  const timestamp = new Date().toISOString();
+
+  // Add the timestamp to the query data
+  queryData.timestamp = timestamp;
+
+  // Get the file path from the environment variable (FILE_PATH2)
+  const filePath2 = process.env.FILE_PATH2;  // Using FILE_PATH2 as the destination for saving data
+
+  // Read the existing queries from the JSON file at FILE_PATH2
+  fs.readFile(filePath2, 'utf8', (err, data) => {
+    if (err) {
+      console.error('Error reading file:', err);
+      return res.status(500).json({ message: 'Error reading file' });
+    }
+
+    let queries = [];
+    if (data) {
+      queries = JSON.parse(data);  // Parse existing queries if any
+    }
+
+    // Add the new query to the list
+    queries.push(queryData);
+
+    // Write the updated queries array back to the FILE_PATH2 JSON file
+    fs.writeFile(filePath2, JSON.stringify(queries, null, 2), 'utf8', (err) => {
+      if (err) {
+        console.error('Error writing file:', err);
+        return res.status(500).json({ message: 'Error saving query' });
+      }
+
+      res.status(200).json({ message: 'Query submitted successfully' });
+    });
+  });
+});
 
 // Define the /heartbeat endpoint
 app.get('/heartbeat', (req, res) => {
