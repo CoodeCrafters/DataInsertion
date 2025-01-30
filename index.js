@@ -293,7 +293,7 @@ async function updateAudioResourcesJSON(content) {
   return response.data;
 }
 
-// Endpoint to add details to an audiobook entry and save to MongoDB
+/// Endpoint to add details to an audiobook entry and save to MongoDB
 app.post('/update-audiobook-details', async (req, res) => {
   const { id, totalDuration, genre, coverPhoto, year, mp3Details } = req.body;
 
@@ -317,7 +317,14 @@ app.post('/update-audiobook-details', async (req, res) => {
         entry.genre = genre || entry.genre;
         entry.bookCover_url = coverPhoto || entry.bookCover_url;
         entry.year_of_published = year || entry.year_of_published;
-        entry.mp3Details = mp3Details.map((mp3) => ({ title: mp3.title }));
+
+        // Save duration in GitHub JSON (but NOT in MongoDB)
+        entry.mp3Details = mp3Details.map((mp3) => ({
+          title: mp3.title,
+          duration: mp3.duration, // Save duration in GitHub JSON
+          link: mp3.link
+        }));
+
         entryFound = true;
         break;
       }
@@ -330,13 +337,22 @@ app.post('/update-audiobook-details', async (req, res) => {
     // Update GitHub JSON
     await updateAudioResourcesJSON(audioResources);
 
-    // Save the audiobook details to MongoDB
+    // Save the audiobook details to MongoDB (without duration)
     const existingAudiobook = await Audiobook.findOne({ id });
     if (existingAudiobook) {
-      existingAudiobook.mp3Details = mp3Details; // Update the mp3Details array
+      existingAudiobook.mp3Details = mp3Details.map((mp3) => ({
+        title: mp3.title,
+        link: mp3.link // Do NOT include duration in MongoDB
+      }));
       await existingAudiobook.save();
     } else {
-      const newAudiobook = new Audiobook({ id, mp3Details });
+      const newAudiobook = new Audiobook({
+        id,
+        mp3Details: mp3Details.map((mp3) => ({
+          title: mp3.title,
+          link: mp3.link // Do NOT include duration in MongoDB
+        }))
+      });
       await newAudiobook.save();
     }
 
@@ -349,6 +365,7 @@ app.post('/update-audiobook-details', async (req, res) => {
     });
   }
 });
+
 
 // Define the /heartbeat endpoint
 app.get('/heartbeat', (req, res) => {
